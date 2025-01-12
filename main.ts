@@ -1,31 +1,43 @@
 namespace SpriteSheet{
     export let playerImage: Image = assets.image`playerShip`
-
 }
-//% promise
+namespace userconfig {
+    export const ARCADE_SCREEN_WIDTH = 320
+    export const ARCADE_SCREEN_HEIGHT = 240
+}
+
 
 let playerSprite: Sprite = sprites.create(SpriteSheet.playerImage);
-sprites.setDataNumber(playerSprite, "currentAngle", 0)
+sprites.setDataNumber(playerSprite, "currentAngle", Math.PI)
 sprites.setDataNumber(playerSprite, "desiredAngle", 0)
 let previousAction: string = "none"
 
 
+function turnLeft() {
+    smoothRotate(playerSprite, - Math.PI / 2, 100)
+    pause(10)
 
-async function turnLeft() {
-    
-    timer.throttle(previousAction, 500, function () {
-        smoothRotate(playerSprite, - Math.PI / 2, 100)
-    })
 }
-async function turnRight() {
-    previousAction = "move"
-    timer.throttle(previousAction, 500, () => smoothRotate(playerSprite, Math.PI / 2, 10))
+function turnRight(){
+    smoothRotate(playerSprite, Math.PI / 2, 100)
+    pause(10)
 }
-
+function shoot(){
+    let projectile:Sprite = sprites.create(assets.image`bullet`, SpriteKind.Projectile)
+    projectile.setPosition(playerSprite.x, playerSprite.y)
+    let direction: number = spriteutils.heading(playerSprite)
+    projectile.z = -1
+    spriteutils.setVelocityAtAngle(projectile, direction, 125)
+    pause(500)
+}
 
 
 turnRight()
-turnRight()
+turnLeft()
+turnLeft()
+shoot()
+shoot()
+shoot()
 
 function smoothRotate(sprite: Sprite, rotationAngle: number, stepsize: number): void {
     previousAction = "move"
@@ -34,22 +46,13 @@ function smoothRotate(sprite: Sprite, rotationAngle: number, stepsize: number): 
     sprites.setDataNumber(playerSprite, "desiredAngle", desiredAngle)
     let rotationRate: number = 0.1 * Math.sin(rotationAngle) / stepsize
 
-    // for(let step = 0; step < stepsize; step++){
-    //     let interpolatedValue: number = lerp(sprites.readDataNumber(playerSprite, "currentAngle"), sprites.readDataNumber(playerSprite, "desiredAngle"), step*(1/stepsize))
-    //     sprites.setDataNumber(playerSprite, "currentAngle", interpolatedValue)
-    //     playerSprite.setImage(SpriteSheet.playerImage)
-    //     rotsprite.rotSprite(playerSprite, sprites.readDataNumber(playerSprite, "currentAngle"))
-    //     pause(100)
-    // }
-
-    forever(function (): void {
-        let currentAngle: number = sprites.readDataNumber(playerSprite, "currentAngle")
-        let desiredAngle: number = sprites.readDataNumber(playerSprite, "desiredAngle")
-        let interpolatedValue: number = lerp(sprites.readDataNumber(playerSprite, "currentAngle"), sprites.readDataNumber(playerSprite, "desiredAngle"), 0.125)
+    for(let step = 0; step < stepsize; step++){
+        let interpolatedValue: number = lerp(sprites.readDataNumber(playerSprite, "currentAngle"), sprites.readDataNumber(playerSprite, "desiredAngle"), step*(1/stepsize))
         sprites.setDataNumber(playerSprite, "currentAngle", interpolatedValue)
         playerSprite.setImage(SpriteSheet.playerImage)
         rotsprite.rotSprite(playerSprite, sprites.readDataNumber(playerSprite, "currentAngle"))
-    })
+        pause(10)
+    }
 }
 
 
