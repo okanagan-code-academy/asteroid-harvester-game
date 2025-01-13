@@ -88,28 +88,31 @@ class Vector2 {
 namespace gridLayout {
     export let level1 = {
         "layout": [
-            [0, 2, 0, 0, 1],
-            [0, -1, 2, 1, 2],
-            [0, 2, 0, 0, 0],
+            [0, 1, 0, 0, 1],
+            [0, -1, 0, 1, 2],
+            [0, 1, 0, 0, 0],
             [0, 0, 2, 0, 1],
             [2, 0, 1, 0, 1],
         ],
         "spawnLocation": new Vector2(1, 1)
     }
 }
-namespace playerSprite {
-    
-}
+
 namespace overlaps {
+    /* Make sure to make the playerSprite variable null, otherwise the weird things can happen...
+    ** - Example: The playerSprite could still shoot after it has been destroyed AND the game was over...
+    */
     sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function(sprite: Sprite, otherSprite: Sprite): void {
-        pause(400)
         sprite.destroy()
+        createPlayerExplosion(otherSprite, 4)
         scene.cameraShake(10, 500)
+        playerSprite = null
     })
     sprites.onOverlap(SpriteKind.Player, SpriteKind.Asteroid, function (sprite: Sprite, otherSprite: Sprite): void {
-        pause(400)
         sprite.destroy()
+        createPlayerExplosion(otherSprite, 4)
         scene.cameraShake(10, 500)
+        playerSprite = null
     })
     sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Enemy, function(sprite: Sprite, otherSprite: Sprite): void {
         sprite.destroy()
@@ -126,8 +129,8 @@ namespace overlaps {
             createDebris(sprite, otherSprite.scale)
         }
         sprite.destroy()
-        // otherSprite.destroy()
-        // scene.cameraShake(10, 500)
+        otherSprite.destroy()
+        scene.cameraShake(10, 500)
     })
     sprites.onDestroyed(SpriteKind.Enemy, function(sprite: Sprite): void {
         createExplosionSprite(sprite, sprite.scale)
@@ -136,18 +139,17 @@ namespace overlaps {
         createExplosionSprite(sprite, sprite.scale)
     })
     sprites.onDestroyed(SpriteKind.Player, function(sprite: Sprite): void {
-        createPlayerExplosion(sprite, 4)
+        
     })
     sprites.onDestroyed(SpriteKind.PlayerExplosion, function(sprite: Sprite): void {
         game.setGameOverEffect(false, effects.none)
         game.gameOver(false)
     })
-    function createPlayerExplosion(sprite: Sprite, scale: number): void {
+    function createPlayerExplosion(targetSprite: Sprite, scale: number): void {
         let duration: number = 200
         let explosionSprite: Sprite = sprites.create(SpriteSheet.playerImage, SpriteKind.PlayerExplosion)
-        explosionSprite.y = sprite.bottom
+        explosionSprite.setPosition(targetSprite.x + (explosionSprite.width), targetSprite.y + (explosionSprite.height / 6))
         explosionSprite.scale = scale
-        spriteutils.placeAngleFrom(explosionSprite, 0, 0, sprite)
         animation.runImageAnimation(explosionSprite, SpriteSheet.playerExplosionAnimation, duration, false)
         explosionSprite.lifespan = duration * SpriteSheet.playerExplosionAnimation.length + 1
         music.playSound(music.bigCrash.toString())
@@ -179,7 +181,7 @@ namespace overlaps {
         explosionSprite.setPosition(sprite.x, sprite.y)
         animation.runImageAnimation(explosionSprite, SpriteSheet.explosionAnimation, intervalDuration, false)
         explosionSprite.lifespan = SpriteSheet.explosionAnimation.length * intervalDuration + 1
-        music.playSound(music.smallCrash.toString())
+        // music.playSound(music.smallCrash.toString())
 
     }
     sprites.onOverlap(SpriteKind.Player, SpriteKind.Location, function(sprite: Sprite, otherSprite: Sprite): void {
@@ -291,8 +293,8 @@ function generateHazards(): void {
 
                 let enemySprite: Sprite = sprites.create(SpriteSheet.enemyImage, SpriteKind.Enemy)
                 sprites.setDataImage(enemySprite, "spriteImage", SpriteSheet.enemyImage)
-                sprites.setDataNumber(enemySprite, "angle", Math.randomRange(-Math.PI, Math.PI))
-                sprites.setDataNumber(enemySprite, "rotationRate", Math.randomRange(-Math.PI / 24, Math.PI / 24))
+                sprites.setDataNumber(enemySprite, "currentAngle", 0)
+                sprites.setDataNumber(enemySprite, "desiredAngle", 0)
 
                 enemySprite.setPosition(sprite.x, sprite.y)
             }
@@ -307,33 +309,39 @@ function generateHazards(): void {
 let currentPosition: Vector2 = Vector2.ZERO()
 let scrollRate: Vector2 = Vector2.ZERO()
 
-function turnLeft(): void{
+
+function turnLeft(): void {
     smoothRotate(playerSprite, - Math.PI / 2, 100)
     directionIndex -= 1
     if(directionIndex < 0){
         directionIndex += targetDirections.length
     }
-
+    pause(500)
 }
 function turnRight(): void{
-    timer.background(function () {
+    timer.background(function(): void {
         for (let sprite of sprites.allOfKind(SpriteKind.Enemy)) {
-            timer.background(function () {
+            timer.background(function (): void {
                 smoothRotate(sprite, randint(-1, 1) * (Math.PI / 2), 100)
-            })   
+            })
         }
     })
     smoothRotate(playerSprite, Math.PI / 2, 100)
     directionIndex += 1
     directionIndex = directionIndex % targetDirections.length
+    pause(500)
+    
 }
 function shoot(): void{
     let projectile:Sprite = sprites.create(SpriteSheet.bulletImage, SpriteKind.Projectile)
+    if(!playerSprite){
+        return
+    }
     projectile.setPosition(playerSprite.x, playerSprite.y)
     let direction: number = sprites.readDataNumber(playerSprite, "currentAngle") - Math.PI / 2
     projectile.z = -1
     spriteutils.setVelocityAtAngle(projectile, direction, 125)
-    music.playSound(music.pewPew.toString())
+    // music.playSound(music.pewPew.toString())
     pause(500)
 }
 function moveForward(): void {
@@ -345,27 +353,10 @@ function moveForward(): void {
         smoothTranslate(playerSprite, neighbourSprite, 750)
         pause(750)
     } else {
-        createTextSprite("Invalid Direction", 2000, 2)
-        img`
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . f f f . . . . . . . . . . .
-            . . f 2 f . . . . . . . . . . .
-            . . f 2 f . . . . . . . . . . .
-            . . f 2 f . . . . . . . . . . .
-            . . f f f . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-            . . . . . . . . . . . . . . . .
-        `
-        pause(2000)
+        createTextSprite("Invalid Direction", 1000, 2)
+       
     }
+    pause(1000)
 }
 
 function createTextSprite(message: string, duration: number, scale: number): void {
@@ -376,34 +367,38 @@ function createTextSprite(message: string, duration: number, scale: number): voi
     textSprite.z = 1000
 }
 
+turnRight()
 moveForward()
+moveForward()
+shoot()
 shoot()
 turnRight()
-shoot()
-turnRight()
-shoot()
-moveForward()
-moveForward()
-moveForward()
+
 
 
 function smoothRotate(sprite: Sprite, rotationAngle: number, stepsize: number): void {
+    if(!sprite) {
+        return
+    }
     let currentAngle: number = sprites.readDataNumber(sprite, "currentAngle")
     let desiredAngle: number = currentAngle + rotationAngle
     sprites.setDataNumber(sprite, "desiredAngle", desiredAngle)
     let rotationRate: number = 0.1 * Math.sin(rotationAngle) / stepsize
 
     for(let step = 0; step < stepsize; step++){
-        let interpolatedValue: number = lerp(sprites.readDataNumber(playerSprite, "currentAngle"), sprites.readDataNumber(playerSprite, "desiredAngle"), step*(1/stepsize))
+        let interpolatedValue: number = lerp(sprites.readDataNumber(sprite, "currentAngle"), sprites.readDataNumber(sprite, "desiredAngle"), step*(1/stepsize))
         sprites.setDataNumber(sprite, "currentAngle", interpolatedValue)
         sprite.setImage(sprites.readDataImage(sprite, "spriteImage"))
-        rotsprite.rotSprite(sprite, sprites.readDataNumber(playerSprite, "currentAngle"))
+        rotsprite.rotSprite(sprite, sprites.readDataNumber(sprite, "currentAngle"))
         pause(10)
     }
 }
 
 function smoothTranslate(sprite: Sprite, target: Sprite, stepsize: number): void {
-    spriteutils.moveTo(playerSprite, target, 750, true)
+    if (!sprite) {
+        return
+    }
+    spriteutils.moveTo(sprite, target, 750, true)
 
 }
 
