@@ -1,7 +1,8 @@
 namespace SpriteSheet{
     export let playerImage: Image =assets.image`playerShip`
     export let bulletImage: Image = assets.image`bullet`
-    export let targeLocation: Image = assets.image`location`
+    export let targetLocationImage: Image = assets.image`location`
+    export let enemyImage: Image =assets.image`enemyShip`
 
     export let asteroidImages: Image[] = [
         sprites.space.spaceSmallAsteroid0,
@@ -16,62 +17,35 @@ namespace SpriteSheet{
         sprites.space.spaceAsteroid3,
         sprites.space.spaceAsteroid4,
     ]
-    export let splashAnimation : Image[] = [
-        sprites.projectile.firework1,
-        sprites.projectile.firework2,
-        sprites.projectile.firework3,
-        sprites.projectile.firework4,
-        sprites.projectile.firework5,
 
-    ]
-    export let explosionAnimation : Image [] = [
+    export let explosionAnimation: Image [] = [
         sprites.projectile.explosion1,
         sprites.projectile.explosion2,
         sprites.projectile.explosion3,
         sprites.projectile.explosion4,
+    ]
+    export let playerExplosionAnimation: Image [] = [
+        sprites.projectile.drop3,
+        sprites.projectile.drop4,
+        sprites.projectile.drop5,
+    ]
+    export let debrisImages: Image [] = [
+        assets.image`particle1`,
+        assets.image`particle2`,
+        assets.image`particle3`,
     ]
 }
 namespace SpriteKind {
     export const Location = SpriteKind.create()
     export const Splash = SpriteKind.create()
     export const Explosion = SpriteKind.create()
+    export const Asteroid = SpriteKind.create()
+    export const PlayerExplosion = SpriteKind.create()
+    export const Particle = SpriteKind.create()
 }
 namespace userconfig {
     export const ARCADE_SCREEN_WIDTH = 320
     export const ARCADE_SCREEN_HEIGHT = 240
-}
-namespace overlaps {
-    sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Enemy, function(sprite: Sprite, otherSprite: Sprite) : void {
-        sprite.destroy()
-        otherSprite.destroy()
-    })
-    sprites.onDestroyed(SpriteKind.Projectile, function(sprite: Sprite) : void {
-        createSplashSprite(sprite)
-    })
-    sprites.onDestroyed(SpriteKind.Enemy, function(sprite : Sprite) : void {
-        createExplosionSprite(sprite, sprite.scale)
-    })
-
-    function createSplashSprite(sprite : Sprite) : void {
-        let intervalDuration: number = 10
-        let splashSprite : Sprite = sprites.create(sprites.projectile.firework1, SpriteKind.Splash)
-        splashSprite.scale = 0.5
-        splashSprite.setPosition(sprite.x, sprite.y)
-        animation.runImageAnimation(splashSprite, SpriteSheet.splashAnimation, intervalDuration, false)
-        splashSprite.lifespan = SpriteSheet.splashAnimation.length * intervalDuration + 1
-    }
-    function createExplosionSprite(sprite : Sprite, scale: number) : void {
-        let intervalDuration : number = 20
-        let explosionSprite : Sprite = sprites.create(sprites.projectile.explosion1, SpriteKind.Explosion)
-        explosionSprite.scale = scale + 0.2
-        explosionSprite.setPosition(sprite.x, sprite.y)
-        animation.runImageAnimation(explosionSprite, SpriteSheet.explosionAnimation, intervalDuration, false)
-        explosionSprite.lifespan = SpriteSheet.explosionAnimation.length * intervalDuration + 1
-
-    }
-    sprites.onOverlap(SpriteKind.Player, SpriteKind.Location, function(sprite : Sprite, otherSprite : Sprite) : void {
-        sprites.setDataSprite(sprite, "locationSprite", otherSprite)
-    })
 }
 class Vector2 {
     x: number = 0
@@ -91,49 +65,155 @@ class Vector2 {
         let vector: Vector2 = Vector2.ZERO()
         return spriteutils.distanceBetween(this, vector)
     }
-    add(vector2 : Vector2): Vector2 {
+    add(vector2: Vector2): Vector2 {
         return new Vector2(this.x + vector2.x, this.y + vector2.y)
     }
-    subtract(vector2 : Vector2) : Vector2 {
+    subtract(vector2: Vector2): Vector2 {
         return new Vector2(vector2.x - this.x, vector2.y - this.y)
     }
-    normalize() : Vector2 {
+    normalize(): Vector2 {
         let length: number = this.length()
         return new Vector2(this.x / length, this.y / length)
     }
     scale(scalar: number): Vector2 {
         return new Vector2(scalar * this.x, scalar * this.y)
     }
-    lerp(vector1 : Vector2, t : number): Vector2 {
+    lerp(vector1: Vector2, t: number): Vector2 {
         let resultVector: Vector2 = Vector2.ZERO()
         resultVector.x = lerp(this.x, vector1.x, t)
         resultVector.y = lerp(this.y, vector1.y, t)
         return resultVector
     }
 }
+namespace gridLayout {
+    export let level1 = {
+        "layout": [
+            [0, 2, 0, 0, 1],
+            [0, -1, 2, 1, 2],
+            [0, 2, 0, 0, 0],
+            [0, 0, 2, 0, 1],
+            [2, 0, 1, 0, 1],
+        ],
+        "spawnLocation": new Vector2(1, 1)
+    }
+}
+namespace playerSprite {
+    
+}
+namespace overlaps {
+    sprites.onOverlap(SpriteKind.Player, SpriteKind.Enemy, function(sprite: Sprite, otherSprite: Sprite): void {
+        pause(400)
+        sprite.destroy()
+        scene.cameraShake(10, 500)
+    })
+    sprites.onOverlap(SpriteKind.Player, SpriteKind.Asteroid, function (sprite: Sprite, otherSprite: Sprite): void {
+        pause(400)
+        sprite.destroy()
+        scene.cameraShake(10, 500)
+    })
+    sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Enemy, function(sprite: Sprite, otherSprite: Sprite): void {
+        sprite.destroy()
+        otherSprite.destroy()
+        let randomAmount: number = randint(10, 20)
+        for (let i = 0; i < randomAmount; i++) {
+            createDebris(sprite, otherSprite.scale)
+        }
+        scene.cameraShake(10, 500)
+    })
+    sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Asteroid, function (sprite: Sprite, otherSprite: Sprite): void {
+        let randomAmount: number = randint(10, 20)
+        for (let i = 0; i < randomAmount; i++) {
+            createDebris(sprite, otherSprite.scale)
+        }
+        sprite.destroy()
+        // otherSprite.destroy()
+        // scene.cameraShake(10, 500)
+    })
+    sprites.onDestroyed(SpriteKind.Enemy, function(sprite: Sprite): void {
+        createExplosionSprite(sprite, sprite.scale)
+    })
+    sprites.onDestroyed(SpriteKind.Asteroid, function (sprite: Sprite): void {
+        createExplosionSprite(sprite, sprite.scale)
+    })
+    sprites.onDestroyed(SpriteKind.Player, function(sprite: Sprite): void {
+        createPlayerExplosion(sprite, 4)
+    })
+    sprites.onDestroyed(SpriteKind.PlayerExplosion, function(sprite: Sprite): void {
+        game.setGameOverEffect(false, effects.none)
+        game.gameOver(false)
+    })
+    function createPlayerExplosion(sprite: Sprite, scale: number): void {
+        let duration: number = 200
+        let explosionSprite: Sprite = sprites.create(SpriteSheet.playerImage, SpriteKind.PlayerExplosion)
+        explosionSprite.y = sprite.bottom
+        explosionSprite.scale = scale
+        spriteutils.placeAngleFrom(explosionSprite, 0, 0, sprite)
+        animation.runImageAnimation(explosionSprite, SpriteSheet.playerExplosionAnimation, duration, false)
+        explosionSprite.lifespan = duration * SpriteSheet.playerExplosionAnimation.length + 1
+        music.playSound(music.bigCrash.toString())
+    }
 
+    function createDebris(targetSprite: Sprite, maxScale: number): void {
+        let directionX: number = randint(-1, 1)
+        let directionY: number = randint(-1, 1)
+        let speed: number = randint(100, 175)
+        let debrisSprite: Sprite = sprites.create(SpriteSheet.debrisImages._pickRandom(), SpriteKind.Particle)
+        spriteutils.placeAngleFrom(debrisSprite, 0, 0, targetSprite)
+        debrisSprite.lifespan = 1000
+        debrisSprite.scale = Math.randomRange(0.2, (maxScale - 0.5))
+        // debrisSprite.setFlag(SpriteFlag.Ghost, true)
+        debrisSprite.setVelocity(directionX*speed, directionY*speed)
+
+        spriteutils.onSpriteUpdate(debrisSprite, function(sprite: Sprite): void {
+            if(sprite.scale > 0.05){
+                sprite.scale += 0.0125
+            } else {
+                sprite.destroy()
+            }
+        })
+    }
+    function createExplosionSprite(sprite: Sprite, scale: number): void {
+        let intervalDuration: number = 50
+        let explosionSprite: Sprite = sprites.create(sprites.projectile.explosion1, SpriteKind.Explosion)
+        explosionSprite.scale = 2*scale
+        explosionSprite.setPosition(sprite.x, sprite.y)
+        animation.runImageAnimation(explosionSprite, SpriteSheet.explosionAnimation, intervalDuration, false)
+        explosionSprite.lifespan = SpriteSheet.explosionAnimation.length * intervalDuration + 1
+        music.playSound(music.smallCrash.toString())
+
+    }
+    sprites.onOverlap(SpriteKind.Player, SpriteKind.Location, function(sprite: Sprite, otherSprite: Sprite): void {
+        sprites.setDataSprite(sprite, "locationSprite", otherSprite)
+    })
+}
+
+music.setVolume(50)
 let gridSprites: Sprite[][] = []
 generateGrid(new Vector2(40, 20), 5, 5)
+generateHazards()
 let playerSprite: Sprite = sprites.create(SpriteSheet.playerImage, SpriteKind.Player);
+sprites.setDataImage(playerSprite, "spriteImage", SpriteSheet.playerImage)
 sprites.setDataNumber(playerSprite, "currentAngle", 0)
 sprites.setDataNumber(playerSprite, "desiredAngle", 0)
-let directionIndex : number = 0
-let targetDirections : string[] = [
+
+
+let directionIndex: number = 0
+let targetDirections: string[] = [
     "topNeighbour",
     "rightNeighbour",
     "bottomNeighbour",
     "leftNeighbour"
 ]
 
+let spawnIndex: Vector2 = gridLayout.level1["spawnLocation"]
+let spawnLocation: Sprite = gridSprites[spawnIndex.x][spawnIndex.y]
 
-
-
-playerSprite.setPosition(40, 210)
+playerSprite.setPosition(spawnLocation.x, spawnLocation.y)
 backgroundScroller(new Vector2(40, 0))
-// generateAsteroids(new Vector2(40, 20), 5, 5)
-scene.setBackgroundImage(assets.image`overlay`)
 
-function generateGrid(startingPosition : Vector2, maxColumns : number, maxRows : number) : void {
+// scene.setBackgroundImage(assets.image`overlay`)
+
+function generateGrid(startingPosition: Vector2, maxColumns: number, maxRows: number): void {
     const spacingX: number = Math.floor(300 / maxColumns)
     const spacingY: number = Math.floor(240 / maxRows)
 
@@ -141,16 +221,16 @@ function generateGrid(startingPosition : Vector2, maxColumns : number, maxRows :
     for (let row = 0; row < maxRows; row++) {
         gridSprites[row] = []
         for (let column = 0; column < maxColumns; column++) {
-            let gridSprite: Sprite = sprites.create(SpriteSheet.targeLocation, SpriteKind.Location)
+            let gridSprite: Sprite = sprites.create(SpriteSheet.targetLocationImage, SpriteKind.Location)
             gridSprite.z = -1
             let newPosition: Vector2 = startingPosition.add(new Vector2(column * spacingX, row * spacingY))
             gridSprite.setPosition(newPosition.x, newPosition.y)
             gridSprites[row].push(gridSprite)
         }
     }
-    let currentRowIndex : number = 0
-    let maxRowIndex : number = gridSprites.length-1
-    let maxColumnIndex : number = gridSprites[0].length-1
+    let currentRowIndex: number = 0
+    let maxRowIndex: number = gridSprites.length-1
+    let maxColumnIndex: number = gridSprites[0].length-1
 
     for(let row of gridSprites) {
         let currentColumnIndex: number = 0
@@ -182,109 +262,152 @@ function generateGrid(startingPosition : Vector2, maxColumns : number, maxRows :
         currentRowIndex += 1
     }
 }
-function generateAsteroids(startingPosition : Vector2, maxColumns: number, maxRows : number) : void {
-    const spacingX : number = Math.floor(300 / maxColumns)
-    const spacingY : number = Math.floor(240 / maxRows)
+function generateHazards(): void {
 
+    for (let row = 0; row < gridLayout.level1["layout"].length; row++) {
+        for(let column = 0; column < gridLayout.level1["layout"][row].length; column++) {
+            let sprite: Sprite = gridSprites[row][column]
+            
+            if(gridLayout.level1["layout"][row][column] == 1){
+                
+                let randomImage: Image = SpriteSheet.asteroidImages._pickRandom()
 
-    for (let column = 0; column < maxColumns; column++) {
-        for(let row = 0; row < maxRows; row++) {
-            let randomImage: Image = SpriteSheet.asteroidImages._pickRandom()
+                let asteroidSprite: Sprite = sprites.create(randomImage, SpriteKind.Asteroid)
+                sprites.setDataImage(asteroidSprite, "spriteImage", randomImage)
+                sprites.setDataNumber(asteroidSprite, "angle", Math.randomRange(-Math.PI, Math.PI))
+                sprites.setDataNumber(asteroidSprite, "rotationRate", Math.randomRange(-Math.PI / 24, Math.PI / 24))
 
-            let asteroidSprite: Sprite = sprites.create(randomImage, SpriteKind.Enemy)
-            sprites.setDataImage(asteroidSprite, "spriteImage", randomImage)
-            sprites.setDataNumber(asteroidSprite, "angle", Math.randomRange(-Math.PI, Math.PI))
-            sprites.setDataNumber(asteroidSprite, "rotationRate", Math.randomRange(-Math.PI / 24, Math.PI / 24))
+                asteroidSprite.setPosition(sprite.x, sprite.y)
+                asteroidSprite.scale = Math.randomRange(1, 2.5)
 
-            let newPosition: Vector2 = startingPosition.add(new Vector2(column * spacingX, row * spacingY))
-            asteroidSprite.setPosition(newPosition.x, newPosition.y)
+                spriteutils.onSpriteUpdate(asteroidSprite, function (sprite: Sprite): void {
+                    let currentAngle: number = sprites.readDataNumber(sprite, "angle")
+                    currentAngle += sprites.readDataNumber(sprite, "rotationRate")
+                    sprites.setDataNumber(sprite, "angle", currentAngle)
+                    sprite.setImage(sprites.readDataImage(sprite, "spriteImage"))
+                    rotsprite.rotSprite(sprite, sprites.readDataNumber(sprite, "angle"))
+                })
+            } else if (gridLayout.level1["layout"][row][column] == 2) {
 
-            spriteutils.onSpriteUpdate(asteroidSprite, function(sprite : Sprite) : void {
-                let currentAngle : number = sprites.readDataNumber(sprite, "angle")
-                currentAngle += sprites.readDataNumber(sprite, "rotationRate")
-                sprites.setDataNumber(sprite, "angle", currentAngle)
-                sprite.setImage(sprites.readDataImage(sprite, "spriteImage"))
-                rotsprite.rotSprite(sprite, sprites.readDataNumber(sprite, "angle"))
-            })
+                let enemySprite: Sprite = sprites.create(SpriteSheet.enemyImage, SpriteKind.Enemy)
+                sprites.setDataImage(enemySprite, "spriteImage", SpriteSheet.enemyImage)
+                sprites.setDataNumber(enemySprite, "angle", Math.randomRange(-Math.PI, Math.PI))
+                sprites.setDataNumber(enemySprite, "rotationRate", Math.randomRange(-Math.PI / 24, Math.PI / 24))
+
+                enemySprite.setPosition(sprite.x, sprite.y)
+            }
+            
         }
         
-
     }
 }
 
 
 
-let currentPosition : Vector2 = Vector2.ZERO()
+let currentPosition: Vector2 = Vector2.ZERO()
 let scrollRate: Vector2 = Vector2.ZERO()
 
-function turnLeft() : void{
+function turnLeft(): void{
     smoothRotate(playerSprite, - Math.PI / 2, 100)
     directionIndex -= 1
     if(directionIndex < 0){
         directionIndex += targetDirections.length
     }
-    pause(10)
 
 }
-function turnRight() : void{
+function turnRight(): void{
+    timer.background(function () {
+        for (let sprite of sprites.allOfKind(SpriteKind.Enemy)) {
+            timer.background(function () {
+                smoothRotate(sprite, randint(-1, 1) * (Math.PI / 2), 100)
+            })   
+        }
+    })
     smoothRotate(playerSprite, Math.PI / 2, 100)
     directionIndex += 1
     directionIndex = directionIndex % targetDirections.length
-    pause(10)
 }
-function shoot() : void{
+function shoot(): void{
     let projectile:Sprite = sprites.create(SpriteSheet.bulletImage, SpriteKind.Projectile)
     projectile.setPosition(playerSprite.x, playerSprite.y)
     let direction: number = sprites.readDataNumber(playerSprite, "currentAngle") - Math.PI / 2
     projectile.z = -1
     spriteutils.setVelocityAtAngle(projectile, direction, 125)
+    music.playSound(music.pewPew.toString())
     pause(500)
 }
-function moveForward() : void {
-    let currentLocationSprite : Sprite = sprites.readDataSprite(playerSprite, "locationSprite")
+function moveForward(): void {
+    pause(100)
+    let currentLocationSprite: Sprite = sprites.readDataSprite(playerSprite, "locationSprite")
     let neighbourSprite: Sprite = sprites.readDataSprite(currentLocationSprite, targetDirections[directionIndex])
-    playerSprite.sayText(targetDirections[directionIndex], 2000)
+    // playerSprite.sayText(targetDirections[directionIndex], 2000)
     if(neighbourSprite){
         smoothTranslate(playerSprite, neighbourSprite, 750)
+        pause(750)
     } else {
-        playerSprite.sayText("Invalid direction", 2000)
+        createTextSprite("Invalid Direction", 2000, 2)
+        img`
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . f f f . . . . . . . . . . .
+            . . f 2 f . . . . . . . . . . .
+            . . f 2 f . . . . . . . . . . .
+            . . f 2 f . . . . . . . . . . .
+            . . f f f . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+            . . . . . . . . . . . . . . . .
+        `
         pause(2000)
     }
-    
 }
 
-turnRight()
+function createTextSprite(message: string, duration: number, scale: number): void {
+    let textSprite: Sprite = textsprite.create(message, 15, 2)
+    textSprite.scale = scale
+    textSprite.lifespan = duration
+    textSprite.setPosition(scene.screenWidth() / 2, scene.screenHeight() / 2)
+    textSprite.z = 1000
+}
+
 moveForward()
+shoot()
 turnRight()
+shoot()
+turnRight()
+shoot()
 moveForward()
-turnRight()
 moveForward()
-turnRight()
 moveForward()
 
 
-
-function smoothRotate(sprite: Sprite, rotationAngle: number, stepsize: number) : void {
+function smoothRotate(sprite: Sprite, rotationAngle: number, stepsize: number): void {
     let currentAngle: number = sprites.readDataNumber(sprite, "currentAngle")
     let desiredAngle: number = currentAngle + rotationAngle
-    sprites.setDataNumber(playerSprite, "desiredAngle", desiredAngle)
+    sprites.setDataNumber(sprite, "desiredAngle", desiredAngle)
     let rotationRate: number = 0.1 * Math.sin(rotationAngle) / stepsize
 
     for(let step = 0; step < stepsize; step++){
         let interpolatedValue: number = lerp(sprites.readDataNumber(playerSprite, "currentAngle"), sprites.readDataNumber(playerSprite, "desiredAngle"), step*(1/stepsize))
-        sprites.setDataNumber(playerSprite, "currentAngle", interpolatedValue)
-        playerSprite.setImage(SpriteSheet.playerImage)
-        rotsprite.rotSprite(playerSprite, sprites.readDataNumber(playerSprite, "currentAngle"))
+        sprites.setDataNumber(sprite, "currentAngle", interpolatedValue)
+        sprite.setImage(sprites.readDataImage(sprite, "spriteImage"))
+        rotsprite.rotSprite(sprite, sprites.readDataNumber(playerSprite, "currentAngle"))
         pause(10)
     }
 }
 
-function smoothTranslate(sprite: Sprite, target : Sprite, stepsize: number) : void {
+function smoothTranslate(sprite: Sprite, target: Sprite, stepsize: number): void {
     spriteutils.moveTo(playerSprite, target, 750, true)
 
 }
 
-function backgroundScroller(rate: Vector2) : void {
+function backgroundScroller(rate: Vector2): void {
     scroller.setLayerImage(0,assets.image`spaceBackground`)
     scroller.setLayerImage(1,assets.image`spaceBackground1`)
     scroller.setLayerImage(2,assets.image`spaceBackground2`)
