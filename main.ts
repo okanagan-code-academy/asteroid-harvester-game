@@ -465,13 +465,6 @@ function turnRight(): void {
     if (!playerSprite) {
         return
     }
-    timer.background(function (): void {
-        for (let sprite of sprites.allOfKind(SpriteKind.Enemy)) {
-            timer.background(function (): void {
-                smoothRotate(sprite, randint(-1, 1) * (Math.PI / 2), 50)
-            })
-        }
-    })
     smoothRotate(playerSprite, Math.PI / 2, 50)
     directionIndex += 1
     directionIndex = directionIndex % targetDirections.length
@@ -555,6 +548,7 @@ function lerp(value0: number, value1: number, t: number): number {
 
 
 // Example Code
-turnRight()
-move()
-move()
+
+// turnLeft()
+// move()
+// shoot()
