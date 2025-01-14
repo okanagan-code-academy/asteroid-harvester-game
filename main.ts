@@ -4,7 +4,8 @@ namespace SpriteSheet {
     export let targetLocationImage: Image = assets.image`location`
     export let enemyImage: Image = assets.image`enemyShip`
     export let mineImage: Image = assets.image`mine`
-    export let wallImage: Image =assets.image`wall`
+    export let wallImage: Image = assets.image`wall`
+    export let cargoImage: Image =assets.image`cargo`
 
     export let mineDetonateAnimation: Image[] = [
         assets.image`mineFlash0`,
@@ -55,6 +56,7 @@ namespace SpriteKind {
     export const Particle = SpriteKind.create()
     export const Mine = SpriteKind.create()
     export const Barrier = SpriteKind.create()
+    export const Cargo = SpriteKind.create()
 }
 namespace userconfig {
     export const ARCADE_SCREEN_WIDTH = 320
@@ -158,6 +160,7 @@ namespace GridLayout {
         ),
     ]
     export let levelWalls: Wall[][] = [
+        [],
         [new Wall(new Vector2(70, 155), 30, false)]
     ]
    
@@ -189,7 +192,7 @@ namespace Events {
     sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Enemy, function (sprite: Sprite, otherSprite: Sprite): void {
         sprite.destroy()
         otherSprite.destroy()
-        let randomAmount: number = randint(10, 20)
+        let randomAmount: number = randint(5, 8)
         for (let i = 0; i < randomAmount; i++) {
             createDebris(sprite, otherSprite.scale)
         }
@@ -389,30 +392,31 @@ function generateGameSprites(currentlevel: number): boolean {
                 let randomImage: Image = SpriteSheet.asteroidImages._pickRandom()
 
                 let asteroidSprite: Sprite = sprites.create(randomImage, SpriteKind.Asteroid)
-                sprites.setDataImage(asteroidSprite, "spriteImage", randomImage)
-                sprites.setDataNumber(asteroidSprite, "angle", Math.randomRange(-Math.PI, Math.PI))
-                sprites.setDataNumber(asteroidSprite, "rotationRate", Math.randomRange(-Math.PI / 48, Math.PI / 48))
-                
-
-                asteroidSprite.setPosition(sprite.x, sprite.y)
-                animation.runMovementAnimation(asteroidSprite, animation.animationPresets(animation.bobbing), (4000 + Math.randomRange(-1500, 1500)), true)
                 asteroidSprite.scale = Math.randomRange(1, 2.5)
+                let time: number = Math.randomRange(0, 2 * Math.PI)
+                let delta: number = Math.randomRange(0.1, 0.4)
+                let maxAmplitude: number = 0.5
+                // sprites.setDataImage(asteroidSprite, "spriteImage", randomImage)
+                // sprites.setDataNumber(asteroidSprite, "angle", Math.randomRange(-Math.PI, Math.PI))
+                // sprites.setDataNumber(asteroidSprite, "rotationRate", Math.randomRange(-Math.PI / 48, Math.PI / 48))
 
-                // spriteutils.onSpriteUpdate(asteroidSprite, function (sprite: Sprite): void {
-                //     let currentAngle: number = sprites.readDataNumber(sprite, "angle")
-                //     currentAngle += sprites.readDataNumber(sprite, "rotationRate")
-                //     sprites.setDataNumber(sprite, "angle", currentAngle)
-                //     sprite.setImage(sprites.readDataImage(sprite, "spriteImage"))
-                //     rotsprite.rotSprite(sprite, sprites.readDataNumber(sprite, "angle"))
-                // })
+                asteroidSprite.setPosition(sprite.x, sprite.y + + maxAmplitude * Math.sin(time))
+                game.onUpdate(function (): void {
+                    time = (time + delta) % (2 * Math.PI)
+                    asteroidSprite.y += maxAmplitude * Math.sin(time)
+                })
             } else if (levelLayout[row][column] == 2) {
 
-                let enemySprite: Sprite = sprites.create(SpriteSheet.enemyImage, SpriteKind.Enemy)
-                sprites.setDataImage(enemySprite, "spriteImage", SpriteSheet.enemyImage)
-                sprites.setDataNumber(enemySprite, "currentAngle", 0)
-                sprites.setDataNumber(enemySprite, "desiredAngle", 0)
-                enemySprite.setPosition(sprite.x, sprite.y)
-
+                let cargoSprite: Sprite = sprites.create(SpriteSheet.cargoImage, SpriteKind.Cargo)
+                let time: number = Math.randomRange(0, 2 * Math.PI)
+                let delta: number = Math.randomRange(0.06, 0.25)
+                let maxAmplitude: number = 0.5
+                cargoSprite.setPosition(sprite.x, sprite.y + maxAmplitude*Math.sin(time))
+               
+                game.onUpdate(function(): void{
+                    time = (time + delta) % (2*Math.PI)
+                    cargoSprite.y += maxAmplitude*Math.sin(time)
+                })
             } else if (levelLayout[row][column] == 3) {
                 let mineSprite: Sprite = sprites.create(SpriteSheet.mineImage, SpriteKind.Mine)
                 mineSprite.scale = 4
@@ -426,14 +430,13 @@ function generateGameSprites(currentlevel: number): boolean {
                 sprites.setDataNumber(playerSprite, "desiredAngle", 0)
                 playerSprite.setPosition(sprite.x, sprite.y)
             }
-
         }
-
     }
     return true
 }
 function generateWalls(currentlevel: number): boolean {
     let levelWalls: GridLayout.Wall[] = GridLayout.levelWalls[currentLevel]
+    
     for(let wall of levelWalls){
         wall.createSprite()
     }
@@ -468,14 +471,14 @@ function turnRight(): void {
     smoothRotate(playerSprite, Math.PI / 2, 50)
     directionIndex += 1
     directionIndex = directionIndex % targetDirections.length
-    pause(100)
+    pause(10)
 
 }
 function shoot(): void {
     if (!playerSprite) {
         return
     }
-    pause(500)
+    pause(100)
     let projectile: Sprite = sprites.create(SpriteSheet.bulletImage, SpriteKind.Projectile)
     projectile.setPosition(playerSprite.x, playerSprite.y)
     sprites.setDataString(projectile, "direction", targetDirections[directionIndex])
@@ -489,7 +492,7 @@ function move(): void {
     if (!playerSprite) {
         return
     }
-    pause(200)
+    pause(100)
     let currentLocationSprite: Sprite = sprites.readDataSprite(playerSprite, "locationSprite")
     let neighbourSprite: Sprite = sprites.readDataSprite(currentLocationSprite, targetDirections[directionIndex])
     // playerSprite.sayText(targetDirections[directionIndex], 2000)
@@ -498,10 +501,26 @@ function move(): void {
     } else {
         createTextSprite("Invalid Direction", 1000, 2)
     }
-    pause(200)
+    pause(100)
 }
-function collectScrap(): void {
-
+function collectCargo(): void {
+    if(!playerSprite){
+        return
+    }
+    pause(100)
+    let cargoCollected: boolean = false
+    for(let cargoSprite of sprites.allOfKind(SpriteKind.Cargo)){
+        if(playerSprite.overlapsWith(cargoSprite)){
+            cargoSprite.destroy()
+            music.playSound(music.baDing.toString())
+            cargoCollected = true
+            break
+        }
+    }
+    if(!cargoCollected){
+        createTextSprite("No Cargo Found", 1000, 2)
+    }
+    pause(100)
 }
 
 // helper methods
@@ -537,8 +556,8 @@ function smoothTranslate(sprite: Sprite, target: Sprite, stepsize: number): void
 
 }
 function backgroundScroller(rate: Vector2): void {
-    scroller.setLayerImage(0, assets.image`spaceBackground`)
-    scroller.setLayerImage(2, assets.image`spaceBackground2`)
+    scroller.setLayerImage(0,assets.image`spaceBackground`)
+    scroller.setLayerImage(2,assets.image`spaceBackground2`)
     scroller.scrollBackgroundWithSpeed(-rate.x, -rate.y, 2)
     scroller.scrollBackgroundWithSpeed(-rate.x / 5, -rate.y / 5, 0)
 }
@@ -548,7 +567,13 @@ function lerp(value0: number, value1: number, t: number): number {
 
 
 // Example Code
-
-// turnLeft()
-// move()
-// shoot()
+shoot()
+turnLeft()
+turnLeft()
+shoot()
+move()
+move()
+move()
+turnRight()
+move()
+collectCargo()
