@@ -1,12 +1,12 @@
 namespace SpriteSheet {
     export let playerImage: Image = assets.image`playerShip`
     export let bulletImage: Image = assets.image`bullet`
-    export let targetLocationImage: Image =assets.image`location`
+    export let targetLocationImage: Image = assets.image`location`
     export let enemyImage: Image = assets.image`enemyShip`
     export let mineImage: Image = assets.image`mine`
     export let wallImage: Image = assets.image`wall`
     export let cargoImage: Image = assets.image`cargo`
-    export let winImage: Image =assets.image`win`
+    export let winImage: Image = assets.image`win`
 
     export let mineDetonateAnimation: Image[] = [
         assets.image`mineFlash0`,
@@ -74,7 +74,7 @@ namespace SpriteSheet {
         assets.image`win4`,
         assets.image`win1`,
     ]
-    
+
 }
 namespace SpriteKind {
     export const Location = SpriteKind.create()
@@ -129,8 +129,8 @@ class Vector2 {
         resultVector.y = lerp(this.y, vector1.y, t)
         return resultVector
     }
-    dot(vector1: Vector2) : number {
-        return this.x*vector1.x + this.y*vector1.y
+    dot(vector1: Vector2): number {
+        return this.x * vector1.x + this.y * vector1.y
     }
 }
 namespace GridLayout {
@@ -145,17 +145,17 @@ namespace GridLayout {
         length: number
         vertical: boolean
         image: Image = SpriteSheet.wallImage
-        
-        constructor(position: Vector2, length: number, vertical: boolean){
+
+        constructor(position: Vector2, length: number, vertical: boolean) {
             this.position = position
             this.length = length
             this.vertical = vertical
         }
         createSprite(): Sprite {
             let wallSprite: Sprite = sprites.create(this.image, SpriteKind.Barrier)
-            if(this.vertical){
+            if (this.vertical) {
                 wallSprite.setImage(this.image)
-                rotsprite.rotSprite(wallSprite, Math.PI/2)
+                rotsprite.rotSprite(wallSprite, Math.PI / 2)
                 wallSprite.sx = this.length
             } else {
                 wallSprite.sy = this.length
@@ -163,7 +163,7 @@ namespace GridLayout {
             wallSprite.setPosition(this.position.x, this.position.y)
             return wallSprite
         }
-        
+
     }
     export let allLevels: Level[] = [
         /* 
@@ -193,7 +193,7 @@ namespace GridLayout {
         [],
         [new Wall(new Vector2(70, 155), 30, false)]
     ]
-   
+
 
 }
 
@@ -215,8 +215,8 @@ namespace Events {
     })
     sprites.onOverlap(SpriteKind.Player, SpriteKind.WinLocation, function (sprite: Sprite, otherSprite: Sprite): void {
         pause(1000)
-        if(sprites.allOfKind(SpriteKind.Cargo).length > 0){
-            createTextSprite("Collect all cargo!", 1500, 2)
+        if (sprites.allOfKind(SpriteKind.Cargo).length > 0) {
+            createTextSprite("Collect all cargo!", 1500, 2, 2)
             pause(1500)
             destroyPlayer(sprite)
             otherSprite.setFlag(SpriteFlag.Ghost, true)
@@ -224,6 +224,7 @@ namespace Events {
         }
         game.gameOver(true)
     })
+  
     sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Enemy, function (sprite: Sprite, otherSprite: Sprite): void {
         sprite.destroy()
         otherSprite.destroy()
@@ -242,38 +243,49 @@ namespace Events {
         otherSprite.destroy()
         scene.cameraShake(10, 500)
     })
-    sprites.onOverlap(SpriteKind.Mine, SpriteKind.Location, function(sprite: Sprite, otherSprite: Sprite): void {
+    sprites.onOverlap(SpriteKind.Mine, SpriteKind.Location, function (sprite: Sprite, otherSprite: Sprite): void {
         otherSprite.destroy()
 
         // must set all neighbouring location sprites to have a null location since we removed one
-        for(let i = 0; i < targetDirections.length; i++){
+        for (let i = 0; i < targetDirections.length; i++) {
             let conjugateNeighbourIndex = (i + 2) % targetDirections.length
             let neighbourSprite: Sprite = sprites.readDataSprite(otherSprite, targetDirections[i])
             sprites.setDataSprite(neighbourSprite, targetDirections[conjugateNeighbourIndex], null)
         }
         otherSprite = null
-        pause(500 + 200*sprites.readDataNumber(sprite, "mineCount"))
+        pause(500 + 200 * sprites.readDataNumber(sprite, "mineCount"))
         animation.runImageAnimation(sprite, SpriteSheet.mineDetonateAnimation, 75, true)
         animation.animationPresets(animation.shake)
         sprite.lifespan = 750
-        
+
     })
     sprites.onOverlap(SpriteKind.Projectile, SpriteKind.Barrier, function (sprite: Sprite, otherSprite: Sprite): void {
         sprite.destroy()
     })
 
     // onCreated
-    sprites.onCreated(SpriteKind.Projectile, function(sprite: Sprite){
-        spriteutils.onSpriteUpdate(sprite, function(sprite: Sprite){
-            if (sprites.readDataString(sprite, "direction") == targetDirections[0] || sprites.readDataString(sprite, "direction") == targetDirections[2]){
-                if (spriteutils.distanceBetween(sprite, playerSprite) > (userconfig.ARCADE_SCREEN_WIDTH - 20) / maxColumns + 20){
+    sprites.onCreated(SpriteKind.Projectile, function (sprite: Sprite) {
+        spriteutils.onSpriteUpdate(sprite, function (sprite: Sprite) {
+            if (sprites.readDataString(sprite, "direction") == targetDirections[0] || sprites.readDataString(sprite, "direction") == targetDirections[2]) {
+                if (spriteutils.distanceBetween(sprite, playerSprite) > (userconfig.ARCADE_SCREEN_WIDTH - 20) / maxColumns) {
                     sprite.destroy()
+                    for (let asteroid of spriteutils.getSpritesWithin(SpriteKind.Asteroid, 15, sprite)) {
+                        asteroid.destroy()
+                        let randomAmount: number = randint(5, 8)
+                        for (let i = 0; i < randomAmount; i++) {
+                            createDebris(asteroid, asteroid.scale)
+                        }
+                    }
+                } 
+            } else if (spriteutils.distanceBetween(sprite, playerSprite) > userconfig.ARCADE_SCREEN_HEIGHT / maxRows) {
+                sprite.destroy()
+                for (let asteroid of spriteutils.getSpritesWithin(SpriteKind.Asteroid, 15, sprite)) {
+                    asteroid.destroy()
+                    let randomAmount: number = randint(5, 8)
+                    for (let i = 0; i < randomAmount; i++) {
+                        createDebris(asteroid, asteroid.scale)
+                    }
                 }
-            } else {
-                if (spriteutils.distanceBetween(sprite, playerSprite) > userconfig.ARCADE_SCREEN_HEIGHT / maxRows + 20){
-                    sprite.destroy()
-                }
-                
             }
         })
     })
@@ -339,13 +351,13 @@ namespace Events {
         let explosionSprite: Sprite = sprites.create(sprites.projectile.explosion1, SpriteKind.Explosion)
         explosionSprite.scale = 2 * scale
         explosionSprite.setPosition(sprite.x, sprite.y)
-        animation.runImageAnimation(explosionSprite, animationTrack , intervalDuration, false)
+        animation.runImageAnimation(explosionSprite, animationTrack, intervalDuration, false)
         explosionSprite.lifespan = animationTrack.length * intervalDuration + 1
         music.playSound(music.smallCrash.toString())
 
     }
-    
-    
+
+
 }
 
 music.setVolume(50)
@@ -429,16 +441,15 @@ function generateGameSprites(currentlevel: number): boolean {
     for (let row = 0; row < levelLayout.length; row++) {
         for (let column = 0; column < levelLayout[row].length; column++) {
             let sprite: Sprite = gridSprites[row][column]
-
             if (levelLayout[row][column] == -1) {
                 createPlayerSprite(sprite)
-            }else if (levelLayout[row][column] == 1) {
+            } else if (levelLayout[row][column] == 1) {
                 createAsteroidSprite(sprite)
             } else if (levelLayout[row][column] == 2) {
                 createCargoSprite(sprite)
             } else if (levelLayout[row][column] == 3) {
                 createMineSprite(sprite)
-            } else if (levelLayout[row][column] == 4){
+            } else if (levelLayout[row][column] == 4) {
                 createWinSprite(sprite)
             }
         }
@@ -458,16 +469,16 @@ function createAsteroidSprite(sprite: Sprite): void {
     let asteroidSprite: Sprite = sprites.create(randomImage, SpriteKind.Asteroid)
     asteroidSprite.scale = Math.randomRange(1.4, 2.4)
     let time: number = Math.randomRange(0, 2 * Math.PI)
-    let delta: number = Math.randomRange(0.08, 0.125)
-    let maxAmplitude: number = 0.5
+    let delta: number = Math.randomRange(0.0125, 0.1)
+    let maxAmplitude: number = 6.0
 
     asteroidSprite.setPosition(sprite.x, sprite.y + maxAmplitude * Math.sin(time))
     game.onUpdate(function (): void {
         time = (time + delta) % (2 * Math.PI)
-        asteroidSprite.y += maxAmplitude * Math.sin(time)
+        asteroidSprite.y = sprite.y + maxAmplitude * Math.sin(time)
     })
 }
-function createCargoSprite(sprite: Sprite): void{
+function createCargoSprite(sprite: Sprite): void {
     let cargoSprite: Sprite = sprites.create(SpriteSheet.cargoImage, SpriteKind.Cargo)
     cargoSprite.scale = 1
     let time: number = Math.randomRange(0, 2 * Math.PI)
@@ -497,8 +508,8 @@ function createWinSprite(sprite: Sprite): void {
 }
 function generateWalls(currentlevel: number): boolean {
     let levelWalls: GridLayout.Wall[] = GridLayout.levelWalls[currentLevel]
-    
-    for(let wall of levelWalls){
+
+    for (let wall of levelWalls) {
         wall.createSprite()
     }
     return true
@@ -541,13 +552,16 @@ function shoot(): void {
     }
     pause(100)
     let projectile: Sprite = sprites.create(SpriteSheet.bulletImage, SpriteKind.Projectile)
+    // projectile.setFlag(SpriteFlag.Ghost, true)
+    // timer.after(30, function(): void {
+    //     projectile.setFlag(SpriteFlag.Ghost, false)
+    // })
     projectile.setPosition(playerSprite.x, playerSprite.y)
     sprites.setDataString(projectile, "direction", targetDirections[directionIndex])
     let direction: number = sprites.readDataNumber(playerSprite, "currentAngle") - Math.PI / 2
     projectile.z = -1
     spriteutils.setVelocityAtAngle(projectile, direction, 125)
     music.playSound(music.pewPew.toString())
-    
     pause(500)
 }
 function move(): void {
@@ -561,35 +575,33 @@ function move(): void {
     if (neighbourSprite) {
         smoothTranslate(playerSprite, neighbourSprite, 750)
     } else {
-        createTextSprite("Invalid Direction", 1000, 2)
+        createTextSprite("Invalid Direction", 1000, 2, 2)
     }
-    pause(100)
+    pause(200)
 }
 function collectCargo(): void {
-    if(!playerSprite){
+    if (!playerSprite) {
         return
     }
     pause(100)
     let cargoCollected: boolean = false
-    for(let cargoSprite of sprites.allOfKind(SpriteKind.Cargo)){
-        if(playerSprite.overlapsWith(cargoSprite)){
-            cargoSprite.destroy()
-            music.playSound(music.baDing.toString())
-            cargoCollected = true
-            break
-        }
+    for (let cargoSprite of spriteutils.getSpritesWithin(SpriteKind.Cargo, 10, playerSprite)) {
+        cargoSprite.destroy()
+        music.playSound(music.baDing.toString())
+        cargoCollected = true
+        break
     }
-    if(!cargoCollected){
-        createTextSprite("No Cargo Found", 1000, 2)
+    if (!cargoCollected) {
+        createTextSprite("No Cargo Found", 1000, 2, 2)
     } else {
-        createTextSprite(sprites.allOfKind(SpriteKind.Cargo).length.toString() + " Cargo Remaining", 1000, 2)
+        createTextSprite(sprites.allOfKind(SpriteKind.Cargo).length.toString() + " Cargo Remaining", 1000, 2, 7)
     }
-    pause(100)
+    pause(200)
 }
 
 // helper methods
-function createTextSprite(message: string, duration: number, scale: number): void {
-    let textSprite: Sprite = textsprite.create(message, 15, 2)
+function createTextSprite(message: string, duration: number, scale: number, foregroundColor: number): void {
+    let textSprite: Sprite = textsprite.create(message, 15, foregroundColor)
     textSprite.scale = scale
     textSprite.lifespan = duration
     textSprite.setPosition(scene.screenWidth() / 2, scene.screenHeight() / 2)
@@ -620,8 +632,8 @@ function smoothTranslate(sprite: Sprite, target: Sprite, stepsize: number): void
 
 }
 function backgroundScroller(rate: Vector2): void {
-    scroller.setLayerImage(0,assets.image`spaceBackground`)
-    scroller.setLayerImage(2,assets.image`spaceBackground2`)
+    scroller.setLayerImage(0, assets.image`spaceBackground`)
+    scroller.setLayerImage(2, assets.image`spaceBackground2`)
     scroller.scrollBackgroundWithSpeed(-rate.x, -rate.y, 2)
     scroller.scrollBackgroundWithSpeed(-rate.x / 5, -rate.y / 5, 0)
 }
@@ -631,17 +643,51 @@ function lerp(value0: number, value1: number, t: number): number {
 
 
 // Example Code
+// shoot() - shoots 1 space in the direction the ship is facing
+// move() - move 1 space in the direction the ship is facing
+// turnRight() - rotates right
+// turnLeft() - rotates left (rotating right 3 times)
+// collectCargo() - collects the cargo provided there is one at the space your actions
+
 shoot()
+move ()
+turnRight ()
+move()
+move()
+shoot()
+move()
 turnRight()
+move()
+collectCargo()
+move()
+turnRight()
+move()
 turnRight()
 shoot()
 move()
+turnLeft()
+move()
+move()
+turnLeft()
+shoot()
+move()
+move()
+move()
+turnRight()
+move()
+collectCargo()
+turnRight()
+turnRight()
+move()
+shoot()
+shoot()
 move()
 turnLeft()
 move()
 collectCargo()
 turnRight()
-shoot()
+turnRight()
 move()
 turnLeft()
+shoot()
 move()
