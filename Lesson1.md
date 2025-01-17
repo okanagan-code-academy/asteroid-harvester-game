@@ -1,4 +1,4 @@
-```custom.ts
+```customts
 namespace SpriteSheet {
     export let playerImage: Image = assets.image`playerShip`
     export let bulletImage: Image = assets.image`bullet`
