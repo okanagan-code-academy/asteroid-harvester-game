@@ -16,9 +16,7 @@
         "main.ts",
         "README.md",
         "images.g.jres",
-        "images.g.ts",
-        "Lesson1.md",
-        "Lesson2.md"
+        "images.g.ts"
     ],
     "testFiles": [
         "test.ts"
