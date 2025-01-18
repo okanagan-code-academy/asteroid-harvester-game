@@ -372,7 +372,7 @@ generateGrid(new Vector2(40, 20), maxRows, maxColumns)
 pauseUntil(() => generateGameSprites(currentLevel) && generateWalls(currentLevel))
 
 
-backgroundScroller(new Vector2(40, 0))
+// backgroundScroller(new Vector2(40, 0))
 
 pauseUntil(() => sprites.allOfKind(SpriteKind.Mine).length == 0)
 pause(1000)
@@ -624,12 +624,12 @@ function smoothTranslate(sprite: Sprite, target: Sprite, stepsize: number): void
     spriteutils.moveTo(sprite, target, 750, true)
 
 }
-function backgroundScroller(rate: Vector2): void {
-    scroller.setLayerImage(0, assets.image`spaceBackground`)
-    scroller.setLayerImage(2, assets.image`spaceBackground2`)
-    scroller.scrollBackgroundWithSpeed(-rate.x, -rate.y, 2)
-    scroller.scrollBackgroundWithSpeed(-rate.x / 5, -rate.y / 5, 0)
-}
+// function backgroundScroller(rate: Vector2): void {
+//     scroller.setLayerImage(0,)
+//     scroller.setLayerImage(2,
+//     scroller.scrollBackgroundWithSpeed(-rate.x, -rate.y, 2)
+//     scroller.scrollBackgroundWithSpeed(-rate.x / 5, -rate.y / 5, 0)
+// }
 function lerp(value0: number, value1: number, t: number): number {
     return value0 + t * (value1 - value0);
 }
