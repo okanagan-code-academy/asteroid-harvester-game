@@ -2,7 +2,6 @@ namespace SpriteSheet {
     export let playerImage: Image = assets.image`playerShip`
     export let bulletImage: Image = assets.image`bullet`
     export let targetLocationImage: Image = assets.image`location`
-    export let enemyImage: Image = assets.image`enemyShip`
     export let mineImage: Image = assets.image`mine`
     export let wallImage: Image = assets.image`wall`
     export let cargoImage: Image = assets.image`cargo`
@@ -17,12 +16,6 @@ namespace SpriteSheet {
         assets.image`mineFlash1`,
     ]
     export let asteroidImages: Image[] = [
-        sprites.space.spaceSmallAsteroid0,
-        sprites.space.spaceSmallAsteroid1,
-        sprites.space.spaceSmallAsteroid2,
-        sprites.space.spaceSmallAsteroid3,
-        sprites.space.spaceSmallAsteroid4,
-        sprites.space.spaceSmallAsteroid5,
         sprites.space.spaceAsteroid0,
         sprites.space.spaceAsteroid1,
         sprites.space.spaceAsteroid2,
